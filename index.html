@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Rotating ASCII Sphere with Random Characters & Animated Chain</title>
-  <!-- Import Lexend Giga from Google Fonts -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colossus Cyber</title>
   <link href="https://fonts.googleapis.com/css2?family=Lexend+Giga&display=swap" rel="stylesheet">
   <style>
     body {
@@ -15,56 +15,69 @@
     canvas {
       display: block;
     }
-    /* Centered header style */
-    header {
+    .content {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       color: #fff;
-      font-family: 'Lexend Giga', sans-serif;
-      font-size: 3.5em;
+      text-align: center;
       background: rgba(0, 0, 0, 0.6);
       padding: 20px 40px;
       z-index: 9999;
       pointer-events: none;
+      border-radius: 10px;
+    }
+    .title {
+      font-family: 'Lexend Giga', sans-serif;
+      font-size: clamp(2em, 5vw, 3.5em);
+      white-space: nowrap;
+      margin-bottom: 20px;
+    }
+    .subtitle {
+      font-family: 'Lexend Giga', sans-serif;
+      font-size: clamp(1em, 2vw, 1.5em);
+      margin-bottom: 20px;
+      font-weight: 300;
+      white-space: nowrap;
+    }
+    .contact {
+      font-family: 'Lexend Giga', sans-serif;
+      font-size: clamp(0.8em, 1.5vw, 1.2em);
+      opacity: 0.8;
     }
   </style>
 </head>
 <body>
-  <!-- Centered header -->
-  <header>Colossus Cyber</header>
+  <div class="content">
+    <div class="title">COLOSSUS CYBER</div>
+    <div class="subtitle">Securing the future of trust in critical organizations</div>
+    <div class="contact">Contact Us: info@colossuscyber.ai</div>
+  </div>
   <canvas id="canvas"></canvas>
   <script>
-    // Setup canvas.
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // Rotation angles.
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
     let A = 0, B = 0;
-    
-    // Sphere parameters.
+    const rotationSpeed = 0.002;
     const R = 800;        // sphere radius
     const K = 800;        // projection scaling factor
     const distance = 1200; // viewer distance
-
-    // Grid steps for reduced overlap.
     const phiStep = Math.PI / 12;
     const thetaStep = Math.PI / 12;
-
-    // Character set: digits + uppercase letters.
     const asciiChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-    // Interval range for each digit's regeneration (in milliseconds).
     const minInterval = 1500;
     const maxInterval = 9000;
-
-    // Array to store sphere points.
     const spherePoints = [];
 
-    // Fill the spherePoints array with geometry, a random initial char, and a next update time.
     function generateSpherePoints() {
       for (let phi = 0; phi < Math.PI; phi += phiStep) {
         for (let theta = 0; theta < 2 * Math.PI; theta += thetaStep) {
@@ -80,16 +93,12 @@
     }
     generateSpherePoints();
 
-    // Data for the animated chain.
-    // chainData.indices holds indices (into spherePoints)
-    // chainData.currentSegment is how many segments are drawn.
     let chainData = generateChain();
     let lastSegmentTime = Date.now();
     const segmentDelay = 2000; // milliseconds delay between segments
 
-    // Generate a chain by selecting random spherePoints (by index).
     function generateChain() {
-      const numPoints = Math.floor(Math.random() * 5) + 4; // 4 to 8 points (3–7 connections)
+      const numPoints = Math.floor(Math.random() * 5) + 4;
       const chainIndices = [];
       for (let i = 0; i < numPoints; i++) {
         const randomIndex = Math.floor(Math.random() * spherePoints.length);
@@ -101,7 +110,6 @@
       };
     }
 
-    // Project a point (given phi, theta) to screen coordinates.
     function projectPoint(phi, theta) {
       const x = R * Math.sin(phi) * Math.cos(theta);
       const y = R * Math.sin(phi) * Math.sin(theta);
@@ -129,7 +137,7 @@
     function animate() {
       const now = Date.now();
       
-      // Update individual digits if their timer has elapsed.
+      // Update individual digits.
       for (const sp of spherePoints) {
         if (now >= sp.nextUpdate) {
           sp.ch = asciiChars[Math.floor(Math.random() * asciiChars.length)];
@@ -137,12 +145,10 @@
         }
       }
 
-      // Clear the canvas.
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // --- Draw the sphere characters ---
-      const drawnPoints = [];
+      let drawnPoints = [];
       for (const sp of spherePoints) {
         const { phi, theta, ch } = sp;
         const pos = projectPoint(phi, theta);
@@ -157,18 +163,33 @@
         });
       }
 
-      // Sort back-to-front.
-      drawnPoints.sort((a, b) => a.z - b.z);
+      const threshold = 20;
+      const acceptedPoints = [];
+      drawnPoints.sort((a, b) => b.z - a.z);
+      for (const p of drawnPoints) {
+        let overlap = false;
+        for (const q of acceptedPoints) {
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          if (Math.sqrt(dx * dx + dy * dy) < threshold) {
+            overlap = true;
+            break;
+          }
+        }
+        if (!overlap) {
+          acceptedPoints.push(p);
+        }
+      }
+      acceptedPoints.sort((a, b) => a.z - b.z);
 
       ctx.font = "18px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      for (const p of drawnPoints) {
+      for (const p of acceptedPoints) {
         ctx.fillStyle = p.color;
         ctx.fillText(p.ch, p.x, p.y);
       }
 
-      // --- Draw the chain (only complete segments) ---
       if (chainData) {
         ctx.beginPath();
         for (let i = 0; i <= chainData.currentSegment; i++) {
@@ -186,22 +207,17 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Check if it's time to add the next segment.
         if (now - lastSegmentTime > segmentDelay) {
           chainData.currentSegment++;
           lastSegmentTime = now;
-          // When the chain is complete, generate a new one.
           if (chainData.currentSegment >= chainData.indices.length) {
             chainData = generateChain();
             lastSegmentTime = now;
           }
         }
       }
-
-      // Update rotation.
-      A += 0.005;
-      B += 0.005;
-      
+      A += rotationSpeed;
+      B += rotationSpeed;
       requestAnimationFrame(animate);
     }
 
